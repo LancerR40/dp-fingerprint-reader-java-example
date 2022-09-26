@@ -14,33 +14,26 @@ import com.digitalpersona.uareu.*;
 
 public class Capture {
     
-    private ReaderCollection readers = null;
-    private Reader           reader  = null;
-    
-    public Capture() {
-    
-    }
-    
-    public void startCapture() {
-        getReader();
-        capture();
-    }
-    
-    public void getReader() {
-        try {
-            // get readers collection
-            readers = UareUGlobal.GetReaderCollection();
-            readers.GetReaders();
-            
-            // set reader
-            reader = readers.get(0);
-            
-            // open reader in exclusive mode
-            reader.Open(Reader.Priority.EXCLUSIVE);
-            
-        } catch(UareUException e) {
-            System.out.print(e);
+    // class to build capture data
+    public class CaptureEvent {
+        public Reader.CaptureResult captureResult = null;
+        public Reader.Status        readerStatus  = null;
+        public UareUException       exception     = null;
+        public InterruptedException interrupted   = null;
+        
+        CaptureEvent(Reader.CaptureResult cr, Reader.Status rs, UareUException ex, InterruptedException in) {
+            captureResult = cr;
+            readerStatus  = rs;
+            exception     = ex;
+            interrupted   = in;
         }
+    }
+    
+    private Reader           reader      = null;
+    private CaptureEvent     lastCapture = null;
+    
+    public Capture(Reader r) {
+        reader = r;
     }
     
     public void capture() {
@@ -54,38 +47,35 @@ public class Capture {
                     try {
                         TimeUnit.SECONDS.sleep(1);
                     } catch(InterruptedException e) {
-                        System.out.print(e);
+                        notifyListener(null, rs, null, e);
                         break; 
                     }
-                }
-                
-                else if (rs.status == Reader.ReaderStatus.READY || rs.status == Reader.ReaderStatus.NEED_CALIBRATION) {
-                    // ready for capture
+                } else if (rs.status == Reader.ReaderStatus.READY || rs.status == Reader.ReaderStatus.NEED_CALIBRATION) {
                     isReady = true;
-                    break;
-                }
-                
-                else {
-                    // reader notify error
+                } else {
+                    notifyListener(null, rs, null, null);
                     break;
                 }
                 
             }
             
             if (isReady == true) {
-                Reader.CaptureResult captureResult = reader.Capture(Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_PIV, reader.GetCapabilities().resolutions[0], -1);
-                notifyListener(captureResult, null, null);
+                Reader.CaptureResult captureResult = reader.Capture(Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT, reader.GetCapabilities().resolutions[0], -1);
+                notifyListener(captureResult, null, null, null);
             }
             
-            
-            
         } catch(UareUException e) {
-            System.out.print(e);
+            notifyListener(null, null, e, null);
         }
     }
     
-    public void notifyListener(Reader.CaptureResult cr, Reader.Status rs, UareUException exception) {
-        System.out.print(cr);
+    public CaptureEvent getLastCapture() {
+        return lastCapture;
+    }
+    
+    public void notifyListener(Reader.CaptureResult cr, Reader.Status rs, UareUException ex, InterruptedException in) {
+        final CaptureEvent event = new CaptureEvent(cr, rs, ex, in);
+        lastCapture = event;
     }
     
 }
