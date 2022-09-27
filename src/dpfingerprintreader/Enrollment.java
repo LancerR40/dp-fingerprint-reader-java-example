@@ -7,23 +7,34 @@ package dpfingerprintreader;
 /**
  *
  * @author TTruc
- */
+*/
 
 import java.util.Base64;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.digitalpersona.uareu.*;
-import org.json.*;
 
 public class Enrollment {
-    public Reader reader     = null;
-    public String enrollment = null;
+    
+    /* class to build a enrollment object */
+    public class EnrollmentData {
+        public String     encodedFMDEnrollment = null;
+        public Fmd.Format FMDFormat            = null;
+        public String     errorMessage         = null;
+            
+        EnrollmentData(String encoded, Fmd.Format format, String errorMsg) {
+            encodedFMDEnrollment = encoded;
+            FMDFormat            = format;
+            errorMessage         = errorMsg;
+        }
+    }
+    
+    public Reader         reader     = null;
+    public EnrollmentData enrollment = null;
     
     public class EnrollmentProcess implements Engine.EnrollmentCallback {
-        public Reader reader     = null;
-        public String enrollment = null;
-
+        public Reader         reader     = null;
+        public EnrollmentData enrollment = null;
+        
+        /*
         public class EnrollmentEvent {
             public Reader.CaptureResult readerCapture = null;
             public Reader.Status        readerStatus  = null;
@@ -37,6 +48,7 @@ public class Enrollment {
                 exception     = ex;
             }
         }
+        */
         
         EnrollmentProcess(Reader r) {
             reader = r;
@@ -91,46 +103,53 @@ public class Enrollment {
             return prefmd;
         }
         
-        public String getEnrollment() {
+        public EnrollmentData getEnrollment() {
             return enrollment;
         }
         
         public void sendToListener(Fmd fmd, Reader.CaptureResult cr, Reader.Status rs, UareUException ex) {
-            // System.out.print(fmd);
-            
-            JSONObject json = new JSONObject();
+            String encoded = Base64.getEncoder().encodeToString(fmd.getData());
             
             try {
-                String encoded = Base64.getEncoder().encodeToString(fmd.getData());
+                /* free up reader resources */
+                reader.Close();
                 
-                json.put("encodedFMDTemplate", encoded);
-                json.put("format", fmd.getFormat());
-                
-                enrollment = json.toString();
-                
-                // System.out.print(fmd);
-                
-                // String encoded = Base64.getEncoder().encodeToString(fmd.getData());
-                // System.out.print(encoded);
-                
-                // System.out.print("\n");
-                
-                // byte[] decode = Base64.getDecoder().decode(encoded);
-                // System.out.print(decode);
-                
-                // System.out.print("\n");
-                
-                // Fmd a = UareUGlobal.GetImporter().ImportFmd(decode, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
-                // System.out.print(a);
-                
-                // System.out.print("\n");
-                
-                // Fmd b = engine.CreateFmd(fmd.getData(), fmd.getWidth(), fmd.getHeight(), fmd.getResolution(), 0, fmd.getCbeffId(), Fmd.Format.ANSI_378_2004);
-                // System.out.print(fmd.getViews()[0].getFingerPosition());
-                
-            } catch (JSONException ex1) {
-                Logger.getLogger(Enrollment.class.getName()).log(Level.SEVERE, null, ex1);
+                /* build enrollment object */
+                EnrollmentData data = new EnrollmentData(encoded, fmd.getFormat(), "");
+                enrollment = data;
+            } catch(UareUException e) {
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberar los procesos del lector de huella");
+                enrollment = data;
             }
+            
+            // System.out.print(fmd);
+            
+            // JSONObject json = new JSONObject();
+            
+            // json.put("encodedFMDTemplate", encoded);
+            // json.put("format", fmd.getFormat());
+                
+            // enrollment = json.toString();
+                
+            // System.out.print(fmd);
+                
+            // String encoded = Base64.getEncoder().encodeToString(fmd.getData());
+            // System.out.print(encoded);
+                
+            // System.out.print("\n");
+                
+            // byte[] decode = Base64.getDecoder().decode(encoded);
+            // System.out.print(decode);
+                
+            // System.out.print("\n");
+                
+            // Fmd a = UareUGlobal.GetImporter().ImportFmd(decode, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
+            // System.out.print(a);
+                
+            // System.out.print("\n");
+                
+            // Fmd b = engine.CreateFmd(fmd.getData(), fmd.getWidth(), fmd.getHeight(), fmd.getResolution(), 0, fmd.getCbeffId(), Fmd.Format.ANSI_378_2004);
+            // System.out.print(fmd.getViews()[0].getFingerPosition());
         }
         
         public void run() {
@@ -158,7 +177,7 @@ public class Enrollment {
         }
     }
     
-    public String getEnrollment() {
+    public EnrollmentData getEnrollment() {
         return enrollment;
     }
     
@@ -166,7 +185,7 @@ public class Enrollment {
         EnrollmentProcess enrollmentProcess = new EnrollmentProcess(reader);
         enrollmentProcess.run();
         
-        /* set enrollment json */
+        /* set enrollment object */
         enrollment = enrollmentProcess.getEnrollment();
     }
     

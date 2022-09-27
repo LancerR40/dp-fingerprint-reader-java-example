@@ -7,10 +7,11 @@ package dpfingerprintreader;
 /**
  *
  * @author TTruc
- */
+*/
 
 import com.digitalpersona.uareu.*;
-import org.json.*;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Main {
 
@@ -18,14 +19,13 @@ public class Main {
      * @param args the command line arguments
     */
     
-    Reader reader             = null;
-    String getReaderException = null;
+    Reader reader = null;
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws JSONException {
         // TODO code application logic here
         
-        // Main main = new Main();
-        // System.out.print(main.enrollment());
+        Main main = new Main();
+        System.out.print(main.enrollment());
     }
     
     private void getReader() {
@@ -41,16 +41,28 @@ public class Main {
             reader.Open(Reader.Priority.EXCLUSIVE);
             
         } catch(UareUException e) {
-            getReaderException = "Ocurrió un error al obtener el lector de huella";
+            System.out.print("");
         }
     }
     
-    public String enrollment() {
+    public String enrollment() throws JSONException {
         getReader();
         
         Enrollment enrollment = new Enrollment(reader);
         enrollment.run();
-        return enrollment.getEnrollment();
+        
+        Enrollment.EnrollmentData data = enrollment.getEnrollment();
+        JSONObject json = new JSONObject();
+        
+        try {
+            json.put("encodedFMDTemplate", data.encodedFMDEnrollment);
+            json.put("format", data.FMDFormat);
+            json.put("errorMessage", "");
+        } catch(JSONException e) {
+            json.put("errorMessage", "Ocurrió un error al obtener los datos del enrolamiento");
+        }
+  
+        return json.toString();
     }
 
 }
