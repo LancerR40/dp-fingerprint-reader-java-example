@@ -45,11 +45,12 @@ public class Main {
         }
     }
     
-    public JSONObject enrollment() {
+    public String enrollment() {
         getReader();
         
         Enrollment enrollment = new Enrollment(reader);
-        return enrollment.run();
+        enrollment.run();
+        return enrollment.getEnrollment();
     }
 
 }

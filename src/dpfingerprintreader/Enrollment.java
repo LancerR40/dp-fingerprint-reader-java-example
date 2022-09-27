@@ -17,11 +17,12 @@ import com.digitalpersona.uareu.*;
 import org.json.*;
 
 public class Enrollment {
-    public Reader reader = null;
+    public Reader reader     = null;
+    public String enrollment = null;
     
     public class EnrollmentProcess implements Engine.EnrollmentCallback {
-        public Reader     reader     = null;
-        public JSONObject enrollment = null;
+        public Reader reader     = null;
+        public String enrollment = null;
 
         public class EnrollmentEvent {
             public Reader.CaptureResult readerCapture = null;
@@ -90,7 +91,7 @@ public class Enrollment {
             return prefmd;
         }
         
-        public JSONObject getEnrollment() {
+        public String getEnrollment() {
             return enrollment;
         }
         
@@ -102,11 +103,10 @@ public class Enrollment {
             try {
                 String encoded = Base64.getEncoder().encodeToString(fmd.getData());
                 
-                json.append("encodedFMDTemplate", encoded);
-                json.append("format", fmd.getFormat());
+                json.put("encodedFMDTemplate", encoded);
+                json.put("format", fmd.getFormat());
                 
-                enrollment = json;
-                
+                enrollment = json.toString();
                 
                 // System.out.print(fmd);
                 
@@ -158,10 +158,16 @@ public class Enrollment {
         }
     }
     
-    public JSONObject run() {
+    public String getEnrollment() {
+        return enrollment;
+    }
+    
+    public void run() {
         EnrollmentProcess enrollmentProcess = new EnrollmentProcess(reader);
         enrollmentProcess.run();
-        return enrollmentProcess.getEnrollment();
+        
+        /* set enrollment json */
+        enrollment = enrollmentProcess.getEnrollment();
     }
     
     Enrollment(Reader r) {
