@@ -34,25 +34,9 @@ public class Enrollment {
         public Reader         reader     = null;
         public EnrollmentData enrollment = null;
         
-        /*
-        public class EnrollmentEvent {
-            public Reader.CaptureResult readerCapture = null;
-            public Reader.Status        readerStatus  = null;
-            public UareUException       exception     = null;
-            public Fmd                  enrollmentFmd = null;
-            
-            EnrollmentEvent(Fmd fmd, Reader.CaptureResult cr, Reader.Status rs, UareUException ex) {
-                enrollmentFmd = fmd;
-                readerCapture = cr;
-                readerStatus  = rs;
-                exception     = ex;
-            }
-        }
-        */
         
-        EnrollmentProcess(Reader r) {
-            reader = r;
-        }
+        EnrollmentProcess() {}
+        
         
         @Override
         public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
@@ -69,34 +53,32 @@ public class Enrollment {
                 Capture.CaptureEvent event = capture.getLastCapture();
                 
                 if (event.captureResult == null) {
-                    System.out.print("Hello 1");
-                    break;
+                    continue;
                 }
                 
                 else if (event.captureResult.quality == Reader.CaptureQuality.CANCELED) {
-                    System.out.print("Hello 2");
-                    break;
+                    continue;
                 }
                 
                 else if (event.captureResult.image == null && event.captureResult.quality != Reader.CaptureQuality.GOOD) {
-                    System.out.print("Hello 3");
-                    break;
+                    continue;
                 }
                 
-                Engine engine = UareUGlobal.GetEngine();
+                if (event.captureResult != null && event.captureResult.quality == Reader.CaptureQuality.GOOD) {
+                    Engine engine = UareUGlobal.GetEngine();
                 
-                try {
-                    // extract features
-                    Fmd fmd = engine.CreateFmd(event.captureResult.image, Fmd.Format.ANSI_378_2004);
-                    
-                    // return prefmd 
-                    prefmd = new Engine.PreEnrollmentFmd();
-                    prefmd.fmd = fmd;
-                    prefmd.view_index = 0;
-                    
-                   
-                } catch(UareUException e) {
-                    System.out.print("Aquí es el error 1");
+                    try {
+                        // extract features
+                        Fmd fmd = engine.CreateFmd(event.captureResult.image, Fmd.Format.ANSI_378_2004);
+
+                        // return prefmd 
+                        prefmd = new Engine.PreEnrollmentFmd();
+                        prefmd.fmd = fmd;
+                        prefmd.view_index = 0;
+
+                    } catch(UareUException e) {
+                        prefmd = null;
+                    }
                 }
             }
             
@@ -107,22 +89,119 @@ public class Enrollment {
             return enrollment;
         }
         
-        public void sendToListener(Fmd fmd, Reader.CaptureResult cr, Reader.Status rs, UareUException ex) {
-            String encoded = Base64.getEncoder().encodeToString(fmd.getData());
+        public void enrollmentListener(Fmd fmd, String errorMsg) {
+            boolean isClose = closeReader();
             
-            try {
-                /* free up reader resources */
-                reader.Close();
-                
-                /* build enrollment object */
-                EnrollmentData data = new EnrollmentData(encoded, fmd.getFormat(), "");
-                enrollment = data;
-            } catch(UareUException e) {
-                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberar los procesos del lector de huella");
+            if (isClose == true) {
+                if (errorMsg != "") {
+                    EnrollmentData data = new EnrollmentData(null, null, errorMsg);
+                    enrollment = data;
+                } else {
+                    String encoded = Base64.getEncoder().encodeToString(fmd.getData());
+                    EnrollmentData data = new EnrollmentData(encoded, fmd.getFormat(), "");
+                    enrollment = data;
+                }
+            } else {
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberal los recursos del lector de huellas");
                 enrollment = data;
             }
+        }
+        
+        private void getReader() {
+            try {
+                ReaderCollection readers = UareUGlobal.GetReaderCollection();
+                readers.GetReaders();
+
+                reader = readers.get(0);
+            } catch(UareUException e) {
+                System.out.print("");
+            }
+        }
+        
+        public boolean openReader() {
+            try {
+                reader.Open(Reader.Priority.EXCLUSIVE);
+                return true;
+            } catch(UareUException e) {
+                return false;
+            }
+        }
+        
+        public boolean closeReader() {
+            try {
+                reader.Close();
+                return true;
+            } catch (UareUException e) {
+                return false;
+            }
+        }
+        
+        public void run() {
+            getReader();
+            boolean isOpen = openReader();
             
-            // System.out.print(fmd);
+            if (isOpen == true) {
+                Engine engine = UareUGlobal.GetEngine();
+                try {
+                    boolean cancel = false;
+
+                    while(!cancel) {
+                        /* run fmd enrollment */
+                        Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this);
+
+                        if (fmd == null) {
+                            enrollmentListener(null, "El FMD template no pudo ser creado");
+                        } else {
+                            enrollmentListener(fmd, "");
+                        }
+
+                        break;
+                    }
+
+                } catch(UareUException e) {
+                    System.out.print(e);
+                }
+            } else {
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al activar el lector de huellas");
+                enrollment = data;
+            }
+        }
+    }
+    
+    public EnrollmentData getEnrollment() {
+        return enrollment;
+    }
+    
+    public void run() {
+        EnrollmentProcess enrollmentProcess = new EnrollmentProcess();
+        enrollmentProcess.run();
+        
+        /* set enrollment object */
+        enrollment = enrollmentProcess.getEnrollment();
+    }
+    
+    
+    Enrollment() {}
+    
+}
+
+/*
+        public class EnrollmentEvent {
+            public Reader.CaptureResult readerCapture = null;
+            public Reader.Status        readerStatus  = null;
+            public UareUException       exception     = null;
+            public Fmd                  enrollmentFmd = null;
+            
+            EnrollmentEvent(Fmd fmd, Reader.CaptureResult cr, Reader.Status rs, UareUException ex) {
+                enrollmentFmd = fmd;
+                readerCapture = cr;
+                readerStatus  = rs;
+                exception     = ex;
+            }
+        }
+*/
+
+// System.out.print(fmd);
             
             // JSONObject json = new JSONObject();
             
@@ -150,47 +229,24 @@ public class Enrollment {
                 
             // Fmd b = engine.CreateFmd(fmd.getData(), fmd.getWidth(), fmd.getHeight(), fmd.getResolution(), 0, fmd.getCbeffId(), Fmd.Format.ANSI_378_2004);
             // System.out.print(fmd.getViews()[0].getFingerPosition());
-        }
-        
-        public void run() {
-            Engine engine = UareUGlobal.GetEngine();
+
+/*
+    public void sendToListener(Fmd fmd, Reader.CaptureResult cr, Reader.Status rs, UareUException ex, String errorMsg) {
+            
+            
+            String encoded = Base64.getEncoder().encodeToString(fmd.getData());
             
             try {
-                boolean cancel = false;
+              
+                reader.Close();
                 
-                while(!cancel) {
-                    /* run fmd enrollment */
-                    Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this);
-                    
-                    if (fmd == null) {
-                        sendToListener(null, null, null, null);
-                    } else {
-                        sendToListener(fmd, null, null, null);
-                    }
-                    
-                    break;
-                }
-                
+               
+                EnrollmentData data = new EnrollmentData(encoded, fmd.getFormat(), "");
+                enrollment = data;
             } catch(UareUException e) {
-                System.out.print(e);
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberar los procesos del lector de huella");
+                enrollment = data;
             }
+            
         }
-    }
-    
-    public EnrollmentData getEnrollment() {
-        return enrollment;
-    }
-    
-    public void run() {
-        EnrollmentProcess enrollmentProcess = new EnrollmentProcess(reader);
-        enrollmentProcess.run();
-        
-        /* set enrollment object */
-        enrollment = enrollmentProcess.getEnrollment();
-    }
-    
-    Enrollment(Reader r) {
-        reader = r;
-    }
-    
-}
+*/
