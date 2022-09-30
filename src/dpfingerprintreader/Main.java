@@ -10,8 +10,6 @@ package dpfingerprintreader;
 */
 
 import com.digitalpersona.uareu.*;
-import java.util.Base64;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -46,30 +44,6 @@ public class Main {
         }
   
         return json.toString();
-        
-        /*
-        JSONObject json = new JSONObject(encodedFMDs);
-        
-        JSONObject currentFMD = new JSONObject(json.getJSONObject("currentFMD").toString());
-        
-        JSONArray  jsonArr = new JSONArray(json.getJSONArray("FMDs").toString());
-        JSONObject jsonObj = new JSONObject();
-        
-        JSONArray jsonArrTest = new JSONArray();
-        
-        for (int i = 0; i < jsonArr.length(); i++) {
-            jsonObj = jsonArr.getJSONObject(i);
-            
-            byte[] decode = Base64.getDecoder().decode(jsonObj.getString("data"));
-            String format = jsonObj.getString("format"); 
-            
-            Fmd fmd = UareUGlobal.GetImporter().ImportFmd(decode, Fmd.Format.valueOf(format), Fmd.Format.ANSI_378_2004);
-            
-            jsonArrTest.put(Base64.getEncoder().encodeToString(fmd.getData()));
-        }
-        
-        return currentFMD.toString();
-        */
     }
     
     public String enrollment() throws JSONException {

@@ -44,8 +44,6 @@ public class Verification {
         
         fmds = new Fmd[jsonArr.length()];
         
-        // JSONArray jsonArrTest = new JSONArray();
-        
         for (int i = 0; i < jsonArr.length(); i++) {
             jsonObj = jsonArr.getJSONObject(i);
             
@@ -54,8 +52,7 @@ public class Verification {
             
             Fmd someFMD = UareUGlobal.GetImporter().ImportFmd(decode, Fmd.Format.valueOf(format), Fmd.Format.ANSI_378_2004);
             fmds[i] = someFMD;
-            
-            // jsonArrTest.put(Base64.getEncoder().encodeToString(fmd.getData()));
+          
         }
         
         JSONObject currentFMDObject = new JSONObject(json.getJSONObject("currentFMD").toString());
@@ -104,7 +101,10 @@ public class Verification {
     }
     
     public void start() throws JSONException, UareUException {
+        /* decode all FMDs coming from Python */
         decodeFMDs();
+        
+        /* execute verification process */
         verification();
     }
     

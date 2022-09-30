@@ -34,9 +34,7 @@ public class Enrollment {
         public Reader         reader     = null;
         public EnrollmentData enrollment = null;
         
-        
         EnrollmentProcess() {}
-        
         
         @Override
         public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
@@ -92,8 +90,8 @@ public class Enrollment {
         public void enrollmentListener(Fmd fmd, String errorMsg) {
             boolean isClose = closeReader();
             
-            if (isClose == true) {
-                if (errorMsg != "") {
+            if (isClose) {
+                if (!"".equals(errorMsg)) {
                     EnrollmentData data = new EnrollmentData(null, null, errorMsg);
                     enrollment = data;
                 } else {
@@ -102,19 +100,20 @@ public class Enrollment {
                     enrollment = data;
                 }
             } else {
-                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberal los recursos del lector de huellas");
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al liberal los recursos del lector");
                 enrollment = data;
             }
         }
         
-        private void getReader() {
+        private boolean getReader() {
             try {
                 ReaderCollection readers = UareUGlobal.GetReaderCollection();
                 readers.GetReaders();
-
                 reader = readers.get(0);
+                
+                return true;
             } catch(UareUException e) {
-                System.out.print("");
+                return false;
             }
         }
         
@@ -137,33 +136,36 @@ public class Enrollment {
         }
         
         public void run() {
-            getReader();
-            boolean isOpen = openReader();
+            boolean isObtained = getReader();
             
-            if (isOpen == true) {
-                Engine engine = UareUGlobal.GetEngine();
-                try {
-                    boolean cancel = false;
-
-                    while(!cancel) {
-                        /* run fmd enrollment */
-                        Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this);
-
-                        if (fmd == null) {
-                            enrollmentListener(null, "El FMD template no pudo ser creado");
-                        } else {
-                            enrollmentListener(fmd, "");
-                        }
-
-                        break;
-                    }
-
-                } catch(UareUException e) {
-                    System.out.print(e);
-                }
-            } else {
-                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al activar el lector de huellas");
+            if (!isObtained) {
+                EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al obtener el lector");
                 enrollment = data;
+            } else {
+                boolean isOpen = openReader();
+                
+                if (!isOpen) {
+                    EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error al activar el lector");
+                    enrollment = data;
+                } else {
+                    Engine engine = UareUGlobal.GetEngine();
+                    try {
+                        while(true) {
+                            Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this);
+
+                            if (fmd == null) {
+                                enrollmentListener(null, "El FMD template no pudo ser creado");
+                            } else {
+                                enrollmentListener(fmd, "");
+                            }
+
+                            break;
+                        }
+                    } catch(UareUException e) {
+                        EnrollmentData data = new EnrollmentData(null, null, "Ocurrió un error, vuelve a capturar las huellas");
+                        enrollment = data;
+                    }
+                }
             }
         }
     }
