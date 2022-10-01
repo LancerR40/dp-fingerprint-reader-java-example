@@ -52,6 +52,7 @@ public class Capture {
                     }
                 } else if (rs.status == Reader.ReaderStatus.READY || rs.status == Reader.ReaderStatus.NEED_CALIBRATION) {
                     isReady = true;
+                    break;
                 } else {
                     notifyListener(null, rs, null, null);
                     break;

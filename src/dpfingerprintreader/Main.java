@@ -19,7 +19,7 @@ public class Main {
      * @param args the command line arguments
     */
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws JSONException, UareUException {
         // TODO code application logic here
         
         //Main main = new Main();
@@ -27,6 +27,9 @@ public class Main {
         
         // Verification verification = new Verification();
         // verification.decodeFMDs();
+        
+        Identification identification = new Identification();
+        identification.start();
     }
     
     public String verification(String encodedFMDs) throws JSONException, UareUException {
